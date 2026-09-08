@@ -1,0 +1,12 @@
+.build/
+dist/
+.codex/
+.swiftpm/
+.backups/
+.DS_Store
+Package.resolved
+*.dmg
+UploadGithub/
+# Sparkle signing keys and CLI tools (never commit the private key)
+script/sparkle_private_key
+script/.sparkle-bin/

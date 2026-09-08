@@ -1,0 +1,266 @@
+import AppKit
+import SwiftUI
+
+@MainActor
+enum FrogPetAsset {
+    static let imageName = "FrogPet"
+    static let largeMouthImageName = "FrogPetMouthLarge"
+
+    static var image: NSImage? { load(named: imageName) }
+    static var largeMouthImage: NSImage? { load(named: largeMouthImageName) }
+
+    private static func load(named name: String) -> NSImage? {
+        guard let url = PetResourceURLCache.url(named: name, withExtension: "png") else {
+            return nil
+        }
+        return PetImportedImageCache.image(for: url)
+    }
+}
+
+struct FrogPetImage: View {
+    let resourceName: String
+    let imagePurpose: PetImagePurpose
+
+    init(
+        resourceName: String = "FrogPet",
+        imagePurpose: PetImagePurpose = .fullResolution
+    ) {
+        self.resourceName = resourceName
+        self.imagePurpose = imagePurpose
+    }
+
+    var body: some View {
+        PetAssetImageView(
+            url: PetResourceURLCache.url(named: resourceName, withExtension: "png"),
+            purpose: imagePurpose
+        ) {
+            Ellipse()
+                .fill(Color(red: 0.39, green: 0.48, blue: 0.16))
+                .padding(7)
+        }
+    }
+}
+
+struct FrogPetView: View {
+    let expression: PetExpression
+    let isBlinking: Bool
+    let gazeOffset: CGSize
+    let mouthOpen: CGFloat
+    let visualConfiguration: PetVisualConfiguration
+    var customEyeAsset: PetImportedVisualAsset? = nil
+    var appliesVerticalBaseOffsetInView = true
+    var imagePurpose: PetImagePurpose = .fullResolution
+
+    var body: some View {
+        let isEating = mouthOpen > 0.02
+
+        return ZStack {
+            ZStack {
+                FrogPetImage(imagePurpose: imagePurpose)
+
+                if isEating {
+                    FrogPetImage(
+                        resourceName: FrogPetAsset.largeMouthImageName,
+                        imagePurpose: imagePurpose
+                    )
+                        .mask(
+                            Ellipse()
+                                .fill(
+                                    RadialGradient(
+                                        colors: [.white, .white, .clear],
+                                        center: .center,
+                                        startRadius: 7,
+                                        endRadius: 11
+                                    )
+                                )
+                                .frame(width: 22, height: 20)
+                                .offset(x: 0.8, y: 0.5)
+                        )
+                }
+            }
+            .offset(renderedBaseOffset)
+
+            if let eyeConfiguration {
+                if let customEyeAsset {
+                    CustomEyePairView(
+                        asset: customEyeAsset,
+                        configuration: eyeConfiguration,
+                        imagePurpose: imagePurpose
+                    )
+                } else {
+                    FrogEyePairView(
+                        configuration: eyeConfiguration,
+                        expression: expression,
+                        isBlinking: isEating ? false : isBlinking,
+                        gazeOffset: isEating ? .zero : gazeOffset
+                    )
+                }
+            }
+        }
+        .scaleEffect(x: 1, y: isEating ? 1.10 : 1, anchor: .bottom)
+        .animation(.spring(response: 0.28, dampingFraction: 0.52), value: isEating)
+    }
+
+    private var stateConfiguration: PetStateVisualConfiguration {
+        visualConfiguration.configuration(
+            for: mouthOpen > 0.02 ? .eating : PetVisualState(expression: expression)
+        )
+    }
+
+    private var eyeConfiguration: PetEyeModuleConfiguration? {
+        guard var eyes = stateConfiguration.eyes else { return nil }
+        if mouthOpen > 0.02 {
+            eyes.kind = .eating
+        }
+        return eyes
+    }
+
+    private var renderedBaseOffset: CGSize {
+        let offset = stateConfiguration.baseOffset ?? .zero
+        return CGSize(
+            width: CGFloat(offset.x) * PetMetrics.bodyContentSize,
+            height: appliesVerticalBaseOffsetInView
+                ? CGFloat(offset.y) * PetMetrics.bodyContentSize
+                : 0
+        )
+    }
+}
+
+private struct FrogEyePairView: View {
+    let configuration: PetEyeModuleConfiguration
+    let expression: PetExpression
+    let isBlinking: Bool
+    let gazeOffset: CGSize
+
+    var body: some View {
+        EyePairLayout(configuration: configuration) {
+            frogEye(style: eyeStyles.left)
+        } rightEye: {
+            frogEye(style: eyeStyles.right)
+        }
+    }
+
+    private var eyeStyles: (left: EyeStyle, right: EyeStyle) {
+        configuration.eyeStyles(for: expression)
+    }
+
+    private var effectiveBlinking: Bool {
+        configuration.allowsBlinking && isBlinking
+    }
+
+    private var effectiveGaze: CGSize {
+        guard configuration.followsMouse(for: expression) else { return .zero }
+        let scale = CGFloat(configuration.resolvedPupilGazeScale)
+        return CGSize(
+            width: gazeOffset.width * 0.42 * scale,
+            height: gazeOffset.height * 0.42 * scale
+        )
+    }
+
+    private func frogEye(style: EyeStyle) -> some View {
+        FrogEyeMark(
+            style: style,
+            isBlinking: effectiveBlinking,
+            ink: eyeInk
+        )
+            .scaleEffect(CGFloat(configuration.resolvedPupilScale))
+            .offset(effectiveGaze)
+            .animation(.easeOut(duration: 0.10), value: gazeOffset)
+    }
+
+    private var eyeInk: Color {
+        switch configuration.resolvedColorMode {
+        case .automatic:
+            Color(red: 0.10, green: 0.075, blue: 0.045)
+        case .black:
+            .black
+        case .white:
+            .white
+        case .brown:
+            Color(red: 112.0 / 255.0, green: 68.0 / 255.0, blue: 41.0 / 255.0)
+        }
+    }
+}
+
+private struct FrogEyeMark: View {
+    let style: EyeStyle
+    let isBlinking: Bool
+    let ink: Color
+
+    var body: some View {
+        Group {
+            if isBlinking {
+                Capsule(style: .continuous)
+                    .fill(ink)
+                    .frame(width: 8, height: 2)
+            } else {
+                eyeShape
+            }
+        }
+        .frame(width: 13, height: 13)
+    }
+
+    @ViewBuilder
+    private var eyeShape: some View {
+        switch style {
+        case .round:
+            Circle().fill(ink).frame(width: 3.6, height: 3.6)
+        case .largeRound:
+            Circle().fill(ink).frame(width: 4.8, height: 4.8)
+        case .smallRound:
+            Circle().fill(ink).frame(width: 2.8, height: 2.8)
+        case .smile:
+            FrogArcEye(isInverted: false)
+                .stroke(ink, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .frame(width: 8, height: 6)
+        case .invertedSmile:
+            FrogArcEye(isInverted: true)
+                .stroke(ink, style: StrokeStyle(lineWidth: 1.8, lineCap: .round))
+                .frame(width: 8, height: 6)
+        case .sleepy:
+            Capsule(style: .continuous).fill(ink).frame(width: 8, height: 2)
+        case .annoyedLeft:
+            Capsule(style: .continuous).fill(ink).frame(width: 9, height: 2).rotationEffect(.degrees(14))
+        case .annoyedRight:
+            Capsule(style: .continuous).fill(ink).frame(width: 9, height: 2).rotationEffect(.degrees(-14))
+        case .chevronLeft:
+            FrogChevronEye(opensLeft: true)
+                .stroke(ink, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                .frame(width: 8, height: 9)
+        case .chevronRight:
+            FrogChevronEye(opensLeft: false)
+                .stroke(ink, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
+                .frame(width: 8, height: 9)
+        }
+    }
+
+}
+
+private struct FrogArcEye: Shape {
+    let isInverted: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let controlY = isInverted ? rect.maxY + 2 : rect.minY - 2
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + 1, y: rect.midY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - 1, y: rect.midY),
+            control: CGPoint(x: rect.midX, y: controlY)
+        )
+        return path
+    }
+}
+
+private struct FrogChevronEye: Shape {
+    let opensLeft: Bool
+
+    func path(in rect: CGRect) -> Path {
+        let tipX = opensLeft ? rect.minX + 1 : rect.maxX - 1
+        let openX = opensLeft ? rect.maxX - 1 : rect.minX + 1
+        var path = Path()
+        path.move(to: CGPoint(x: openX, y: rect.minY + 1))
+        path.addLine(to: CGPoint(x: tipX, y: rect.midY))
+        path.addLine(to: CGPoint(x: openX, y: rect.maxY - 1))
+        return path
+    }
+}
