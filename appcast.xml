@@ -3,23 +3,15 @@
   <channel>
     <title>bibishi</title>
     <item>
-      <title>bibishi 1.0.2</title>
-      <pubDate>Fri, 11 Sep 2026 04:42:22 +0000</pubDate>
-      <enclosure url="https://github.com/guwan050-sys/bibishi/releases/download/v1.0.2/bibishi-1.0.2-arm64.dmg"
-                 sparkle:version="1.0.2"
-                 sparkle:shortVersionString="1.0.2"
+      <title>bibishi 1.0.3</title>
+      <pubDate>Sat, 10 Oct 2026 06:32:05 +0000</pubDate>
+      <enclosure url="https://github.com/guwan050-sys/bibishi/releases/download/v1.0.3/bibishi-1.0.3-arm64.dmg"
+                 sparkle:version="1.0.3"
+                 sparkle:shortVersionString="1.0.3"
                  sparkle:os="macos"
                  sparkle:arch="arm64"
-                 sparkle:edSignature="2p51BWxcBOVcMLGjpBJ3cHXSyMkLshqObPcswvuTD6UGddbGXmGS1P5pJ1g24elA1b8NmGEFPYDdsKbwCf41DQ=="
-                 length="10910707"
-                 type="application/x-apple-diskimage" />
-      <enclosure url="https://github.com/guwan050-sys/bibishi/releases/download/v1.0.2/bibishi-1.0.2-x86_64.dmg"
-                 sparkle:version="1.0.2"
-                 sparkle:shortVersionString="1.0.2"
-                 sparkle:os="macos"
-                 sparkle:arch="x86_64"
-                 sparkle:edSignature="tC6wMy+8iLBF7YDU+Jq0W0Nh+73zmkmBV7Th1yysDCDWlrkmVFnDm1YLk8tPlVRbH1bPzmrvDSD/lpd6B661CQ=="
-                 length="11084554"
+                 sparkle:edSignature="OHDo0u3UUKfJJjek4em3cuXffh9s/8vH6KMexCzaZw+pWdILwE/2axqWgTsbMyjSxNpMYy+AN8GqhHaOnggpDw=="
+                 length="10981700"
                  type="application/x-apple-diskimage" />
     </item>
   </channel>
